@@ -16,10 +16,20 @@ A munkanaplóban rögzíted, melyik projekten mennyit dolgoztál. A bejegyzések
 
 1. Nyisd meg a projektet, és válts a **Munkanapló** fülre.
 2. Kattints az **+ Új bejegyzés** gombra.
-3. Töltsd ki: feladat címe (kötelező), kategória (kötelező, pl. Szoftverfejlesztő, Tesztelő), leírás, dátum, óra.
+3. Töltsd ki: feladat címe (kötelező), kategória (a projekt saját listájából; kötelező, ha a projektnek van aktív kategóriája, lásd: [Munkakategóriák](./projektek.md#munkakategóriák)), leírás, dátum, óra.
 4. Mentsd.
 
 Az óraszám 0,25 és 24 között lehet. A dátum nem lehet korábbi a projekt kezdő dátumánál. Aki mások munkáját is kezeli (pl. Projektkezelő, projektvezető), a **Kinek a nevében** mezőben más tag nevére is rögzíthet.
+
+## Heti rögzítés
+
+A **Projektek → Heti rögzítés** menüpontban projektbe lépés nélkül rögzítheted a napi munkáidat.
+
+1. A hét napjai kártyákon látszanak a már rögzített munkákkal és a napi összeggel; a hetek között a nyilakkal, vissza az **Ez a hét** gombbal lépsz.
+2. A nap **+ Munka** gombjával válaszd ki a projektet (csak a nyitott projektek, amelyeknek tagja vagy), a kategóriát (ha a projektnek van; az alapértelmezett előre ki van választva), és add meg az órát.
+3. A **Feladat** nem kötelező: üresen a kategória (kategória nélküli projektnél a projekt) neve lesz.
+
+Egy bejegyzésre kattintva szerkesztheted, a ✕ gombbal törölheted. Akinek „Összes munkanapló megtekintése” joga van (pl. Szervezet adminisztrátor), a **Dolgozó** választóval más dolgozó hetét is megnyithatja, és a nevében rögzíthet.
 
 ## A bejegyzések listája
 

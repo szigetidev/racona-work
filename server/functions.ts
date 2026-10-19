@@ -413,17 +413,41 @@ export {
 	listWorkEntries,
 	createWorkEntry,
 	updateWorkEntry,
-	deleteWorkEntry,
-	getWorkEntryCategories
+	deleteWorkEntry
 } from './work-entries.js';
 
 export type {
 	WorkEntry,
 	WorkEntryRow,
-	WorkEntryCategory,
 	WorkEntryListParams,
 	WorkEntryListResult
 } from './work-entries.js';
+
+// --- Munkabejegyzés-kategóriák (projektenként) -----------------------------
+
+export {
+	getWorkEntryCategories,
+	getWorkEntryCategorySources,
+	createWorkEntryCategory,
+	updateWorkEntryCategory,
+	deleteWorkEntryCategory,
+	reorderWorkEntryCategories,
+	copyWorkEntryCategories,
+	setProjectMemberDefaultCategory
+} from './work-categories.js';
+
+export type { WorkEntryCategory, WorkEntryCategorySource } from './work-categories.js';
+
+// --- Heti gyors rögzítés ----------------------------------------------------
+
+export { getQuickEntryOptions } from './quick-entry.js';
+
+export type {
+	QuickEntryOptions,
+	QuickEntryProject,
+	QuickEntryCategory,
+	QuickEntryEmployee
+} from './quick-entry.js';
 
 // --- Projekt riport ---------------------------------------------------------
 

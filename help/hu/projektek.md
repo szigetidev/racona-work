@@ -32,6 +32,7 @@ Megnyílik a projekt adatlapja. A létrehozó „Tulajdonos” szereppel a proje
 - **Tagok:** a projekt tagjai és szerepük.
 - **Munkanapló:** a rögzített munkabejegyzések, lásd: [Munkanapló](./munkanaplo.md).
 - **Riport:** összesítések, lásd lejjebb.
+- **Kategóriák:** a projekt saját munkakategóriái, lásd lejjebb.
 - **Beállítások:** lezárás, visszanyitás, törlés.
 
 ## Projekttagok kezelése
@@ -41,6 +42,8 @@ Megnyílik a projekt adatlapja. A létrehozó „Tulajdonos” szereppel a proje
 3. Mentsd.
 
 A tag szerepe a listában közvetlenül módosítható, és a tag eltávolítható. Külsős dolgozó is felvehető tagnak. Munkát csak a projekt tagja rögzíthet.
+
+Ha a projektnek több aktív kategóriája van, a tagok mellett **Alapértelmezett kategória** is választható. A munka rögzítésekor ez van előre kiválasztva az adott dolgozónak (a munkanaplóban, telefonon és a Heti rögzítésben is). Ha a projektnek csak egy kategóriája van, az magától ki van választva.
 
 ## Projektvezető kijelölése
 
@@ -56,6 +59,17 @@ Lezárt projektnél a munkanapló zárolt: új bejegyzés nem rögzíthető, a m
 2. Erősítsd meg. A fejlécben és a listán „Lezárva” jelvény jelenik meg; fölé állva látszik, ki és mikor zárta le.
 
 Visszanyitás ugyanitt, a **Projekt visszanyitása** gombbal; ezután a munka újra rögzíthető és módosítható. A lezárt projekt nem törölhető, előbb vissza kell nyitni. A státusz (Aktív, Befejezett stb.) a lezárástól független.
+
+## Munkakategóriák
+
+Minden projektnek saját kategórialistája van. A **Kategóriák** fület az látja, akinek „Projektek kezelése” joga van, valamint a projekt projektvezetője.
+
+- **Új kategória:** név megadásával; egy projekten belül két azonos nevű nem lehet.
+- **Átvétel…:** kategóriák másolása a szervezet egy másik projektjéből vagy a **Régi közös listából** (a korábban minden projektre érvényes lista). Csak az aktívak jönnek át, a már meglévő nevek kimaradnak.
+- **Átnevezés**, sorrend (nyilak), **Inaktiválás / Aktiválás:** az inaktív kategória új bejegyzéshez nem választható, a régi bejegyzéseken megmarad.
+- **Törlés (✕):** csak olyan kategóriánál, amelyet egy bejegyzés sem használ.
+
+Amíg a projektnek nincs aktív kategóriája, a munkanaplóban nem kötelező kategóriát választani. Lezárt projekt kategóriái nem módosíthatók.
 
 ## Projekt riport
 

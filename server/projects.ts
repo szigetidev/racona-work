@@ -84,6 +84,8 @@ export interface ProjectMemberRow {
 	position: string | null;
 	role: string;
 	assignedAt: string;
+	/** Alapértelmezett munkakategória ezen a projekten (null: nincs). */
+	defaultCategoryId: number | null;
 }
 
 // --- Segédfüggvények --------------------------------------------------------
@@ -570,7 +572,7 @@ export async function listProjectMembers(
 	const project = await getProject({ id: params.projectId }, context);
 
 	const result = await context.db.query(
-		`SELECT pm.project_id, pm.employee_id, pm.role, pm.assigned_at,
+		`SELECT pm.project_id, pm.employee_id, pm.role, pm.assigned_at, pm.default_category_id,
 		        e.user_id, u.full_name AS user_name, u.email AS user_email, u.image AS user_image,
 		        e.position
 		   FROM app__racona_work.project_members pm
@@ -590,7 +592,8 @@ export async function listProjectMembers(
 		userImage: r.user_image ?? null,
 		position: r.position ?? null,
 		role: r.role,
-		assignedAt: r.assigned_at
+		assignedAt: r.assigned_at,
+		defaultCategoryId: r.default_category_id ?? null
 	}));
 }
 

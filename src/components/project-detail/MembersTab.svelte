@@ -7,9 +7,18 @@
 
 	A "lead" szerepű tag a projektvezető: a projektet kezelheti és lezárhatja
 	(specs/project-lead.md). Kijelölni csak az tudja, aki maga is lezárhatja.
+
+	Ha a projektnek több aktív kategóriája van, a kezelő tagonként
+	alapértelmezett kategóriát állíthat be: rögzítéskor ez van előre kiválasztva.
 -->
 <script lang="ts">
-	import type { ProjectRow, ProjectMemberRow, EmployeeRow } from '../../../server/functions.js';
+	import { untrack } from 'svelte';
+	import type {
+		ProjectRow,
+		ProjectMemberRow,
+		EmployeeRow,
+		WorkEntryCategory
+	} from '../../../server/functions.js';
 	import { resolveSdk, translate } from '../../utils/sdk.js';
 
 	let {
@@ -72,6 +81,48 @@
 	let addMemberRole = $state<string>('member');
 	let addMemberSaving = $state(false);
 	let roleSaving = $state<number | null>(null);
+
+	// Alapértelmezett kategória tagonként (csak több aktív kategóriánál van értelme)
+	let categories = $state<WorkEntryCategory[]>([]);
+	let defaultSaving = $state<number | null>(null);
+	const showDefaultCategory = $derived(canManage && categories.length > 1);
+
+	async function loadCategories() {
+		try {
+			const result = await sdk.remote.call('getWorkEntryCategories', { projectId: project.id });
+			categories = Array.isArray(result) ? (result as WorkEntryCategory[]) : [];
+		} catch {
+			categories = [];
+		}
+	}
+
+	$effect(() => {
+		project.id;
+		const manage = canManage;
+		untrack(() => {
+			if (manage && sdk?.remote) loadCategories();
+			else categories = [];
+		});
+	});
+
+	async function handleDefaultCategoryChange(member: ProjectMemberRow, value: string) {
+		const categoryId = value ? Number(value) : null;
+		if (categoryId === (member.defaultCategoryId ?? null)) return;
+		defaultSaving = member.employeeId;
+		try {
+			await sdk.remote.call('setProjectMemberDefaultCategory', {
+				projectId: project.id,
+				employeeId: member.employeeId,
+				categoryId
+			});
+			sdk?.ui?.toast?.(t('projects.members.defaultCategory.saved'), 'success');
+		} catch (err: any) {
+			sdk?.ui?.toast?.(err?.message ?? t('error.saveFailed'), 'error');
+		} finally {
+			defaultSaving = null;
+			await onChanged();
+		}
+	}
 
 	function initials(name: string | null | undefined): string {
 		return (
@@ -153,6 +204,8 @@
 
 {#if closed}
 	<p class="closed-hint">{t('projects.members.closedHint')}</p>
+{:else if showDefaultCategory}
+	<p class="closed-hint">{t('projects.members.defaultCategory')}: {t('projects.members.defaultCategory.hint')}</p>
 {/if}
 
 {#if membersLoading}
@@ -192,6 +245,23 @@
 							</option>
 						{/each}
 					</select>
+					{#if showDefaultCategory}
+					<select
+						class="role-select category-select"
+						value={m.defaultCategoryId && categories.some((c) => c.id === m.defaultCategoryId) ? String(m.defaultCategoryId) : ''}
+						disabled={defaultSaving === m.employeeId}
+						title={t('projects.members.defaultCategory.hint')}
+						aria-label={t('projects.members.defaultCategory')}
+						onchange={(e) => handleDefaultCategoryChange(m, e.currentTarget.value)}
+					>
+						<option value="">
+							{t('projects.members.defaultCategory')}: {t('projects.members.defaultCategory.none')}
+						</option>
+						{#each categories as c (c.id)}
+							<option value={String(c.id)}>{c.name}</option>
+						{/each}
+					</select>
+				{/if}
 				{:else}
 					<span class="role-badge" class:lead={m.role === LEAD_ROLE}>
 						{roleLabel(m.role)}
@@ -335,6 +405,11 @@
 		background: var(--color-muted, #f1f5f9);
 		color: var(--color-foreground, #0f172a);
 		cursor: pointer;
+	}
+
+	.category-select {
+		max-width: 16rem;
+		background: var(--color-card, #fff);
 	}
 
 	.role-select:disabled {

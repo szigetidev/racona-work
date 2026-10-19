@@ -21,7 +21,6 @@
 		pluginId = 'racona-work',
 		projectId,
 		project,
-		organizationId = null,
 		members,
 		canViewAllWork = false,
 		closed = false,
@@ -30,7 +29,6 @@
 		pluginId?: string;
 		projectId: number;
 		project: ProjectRow;
-		organizationId?: number | null;
 		members: ProjectMemberRow[];
 		canViewAllWork?: boolean;
 		/** Lezárt projekt: nincs felvitel, szerkesztés, törlés. */
@@ -80,12 +78,20 @@
 	let workForEmployeeId = $state<number | null>(null);
 	let workCategoryId = $state<number | null>(null);
 	let workSaving = $state(false);
+	/** Szerkesztéskor a bejegyzés azóta inaktivált kategóriája, hogy megtartható legyen. */
+	let workInactiveCategory = $state<{ id: number; name: string } | null>(null);
 
-	async function loadWorkCategories(orgId: number) {
-		if (!sdk?.remote) return;
+	/** A projekt saját kategóriái; ha nincs egy sem, a kategória nem kötelező. */
+	const categoryRequired = $derived(workCategories.length > 0);
+	const showCategorySelect = $derived(categoryRequired || workInactiveCategory !== null);
+
+	/** `employeeId`: akinek az alapértelmezett kategóriáját jelölje (null: a hívóé). */
+	async function loadWorkCategories(employeeId: number | null = null) {
+		if (!projectId || !sdk?.remote) return;
 		try {
 			const result = (await sdk.remote.call('getWorkEntryCategories', {
-				organizationId: orgId
+				projectId,
+				employeeId
 			})) as WorkEntryCategory[];
 			workCategories = Array.isArray(result) ? result : [];
 		} catch {
@@ -129,7 +135,20 @@
 		workWorkDate = new Date().toISOString().slice(0, 10);
 		workForEmployeeId = null; // saját magam
 		workCategoryId = null;
+		workInactiveCategory = null;
 		showWorkForm = true;
+		loadWorkCategories().then(preselectDefaultCategory);
+	}
+
+	/** Új bejegyzésnél: a dolgozó alapértelmezett kategóriája, vagy ha csak egy van, az az egy. */
+	function preselectDefaultCategory() {
+		workCategoryId =
+			workCategories.find((c) => c.isDefault)?.id ??
+			(workCategories.length === 1 ? workCategories[0].id : null);
+	}
+
+	function onForEmployeeChange() {
+		loadWorkCategories(workForEmployeeId).then(preselectDefaultCategory);
 	}
 
 	function openEditWorkEntry(entry: WorkEntryRow) {
@@ -141,7 +160,13 @@
 		workWorkDate = entry.workDate?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
 		workForEmployeeId = entry.employeeId;
 		workCategoryId = entry.categoryId ?? null;
+		workInactiveCategory = null;
 		showWorkForm = true;
+		loadWorkCategories().then(() => {
+			if (entry.categoryId && !workCategories.some((c) => c.id === entry.categoryId)) {
+				workInactiveCategory = { id: entry.categoryId, name: entry.categoryName ?? '' };
+			}
+		});
 	}
 
 	async function submitWorkEntry() {
@@ -149,7 +174,7 @@
 			sdk?.ui?.toast?.(t('work.form.title') + ': ' + t('form.required'), 'error');
 			return;
 		}
-		if (!workCategoryId) {
+		if (categoryRequired && !workCategoryId) {
 			sdk?.ui?.toast?.(t('work.form.category') + ': ' + t('form.required'), 'error');
 			return;
 		}
@@ -226,10 +251,8 @@
 	});
 
 	$effect(() => {
-		const orgId = organizationId;
-		untrack(() => {
-			if (orgId) loadWorkCategories(orgId);
-		});
+		projectId;
+		untrack(() => loadWorkCategories());
 	});
 </script>
 
@@ -370,15 +393,22 @@
 					<span>{t('work.form.title')} *</span>
 					<input class="input" type="text" bind:value={workTitle} />
 				</label>
-				<label>
-					<span>{t('work.form.category')} *</span>
-					<select class="input" bind:value={workCategoryId}>
-						<option value={null} disabled>{t('work.form.category.none')}</option>
-						{#each workCategories as cat (cat.id)}
-							<option value={cat.id}>{cat.name}</option>
-						{/each}
-					</select>
-				</label>
+				{#if showCategorySelect}
+					<label>
+						<span>{t('work.form.category')}{categoryRequired ? ' *' : ''}</span>
+						<select class="input" bind:value={workCategoryId}>
+							<option value={null} disabled={categoryRequired}>{t('work.form.category.none')}</option>
+							{#each workCategories as cat (cat.id)}
+								<option value={cat.id}>{cat.name}</option>
+							{/each}
+							{#if workInactiveCategory}
+								<option value={workInactiveCategory.id}>
+									{workInactiveCategory.name} ({t('work.form.category.inactive')})
+								</option>
+							{/if}
+						</select>
+					</label>
+				{/if}
 				<label>
 					<span>{t('work.form.description')}</span>
 					<textarea class="input textarea" rows="2" bind:value={workDescription}></textarea>
@@ -408,7 +438,7 @@
 				{#if workFormMode === 'create' && canViewAllWork && members.length > 1}
 					<label>
 						<span>{t('work.form.forEmployee')}</span>
-						<select class="input" bind:value={workForEmployeeId}>
+						<select class="input" bind:value={workForEmployeeId} onchange={onForEmployeeChange}>
 							<option value={null}>{t('work.form.forEmployee.self')}</option>
 							{#each members as m (m.employeeId)}
 								<option value={m.employeeId}>{m.userName} — {m.userEmail}</option>
@@ -424,7 +454,7 @@
 				<button
 					class="btn-primary"
 					onclick={submitWorkEntry}
-					disabled={workSaving || !workTitle.trim() || !workCategoryId}
+					disabled={workSaving || !workTitle.trim() || (categoryRequired && !workCategoryId)}
 				>
 					{workSaving ? t('loading') : t('form.save')}
 				</button>

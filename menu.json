@@ -45,6 +45,13 @@
 				"component": "ProjectList"
 			},
 			{
+				"labelKey": "menu.projects.quickLog",
+				"href": "#projects/week",
+				"icon": "CalendarPlus",
+				"component": "QuickWorkLog",
+				"requiredCapability": "work.log"
+			},
+			{
 				"labelKey": "menu.projects.create",
 				"href": "#projects/new",
 				"icon": "Plus",

@@ -19,6 +19,7 @@
 	  - MembersTab      — tagok listája + hozzáadás modal
 	  - WorkLogTab      — munkanapló (saját szűrők, felviteli modal)
 	  - ReportTab       — aggregált riport + CSV export (önállóan tölt)
+	  - CategoriesTab   — a projekt saját munkabejegyzés-kategóriái (önállóan tölt)
 
 	Az a lista, amit a fejléc badge-e is használ (tagok), itt marad; a fülek
 	`onChanged`-del kérnek újratöltést.
@@ -49,6 +50,7 @@
 	import MembersTab from './project-detail/MembersTab.svelte';
 	import WorkLogTab from './project-detail/WorkLogTab.svelte';
 	import ReportTab from './project-detail/ReportTab.svelte';
+	import CategoriesTab from './project-detail/CategoriesTab.svelte';
 	import { resolveSdk, translate } from '../utils/sdk.js';
 	import { formatDateTime } from '../utils/format.js';
 
@@ -76,7 +78,7 @@
 	// Csak akkor látható a riport fül, ha van jog hozzá.
 	let canViewReport = $derived(canViewAllWork);
 
-	type Tab = 'overview' | 'members' | 'work' | 'report' | 'settings';
+	type Tab = 'overview' | 'members' | 'work' | 'report' | 'categories' | 'settings';
 	let activeTab = $state<Tab>('overview');
 
 	// Projekt adatok
@@ -379,6 +381,15 @@
 						{t('projects.detail.tabs.report')}
 					</button>
 				{/if}
+				{#if canManage}
+					<button
+						class="tab"
+						class:active={activeTab === 'categories'}
+						onclick={() => (activeTab = 'categories')}
+					>
+						{t('projects.detail.tabs.categories')}
+					</button>
+				{/if}
 				{#if canManage || canClose}
 					<button
 						class="tab"
@@ -418,7 +429,6 @@
 						{pluginId}
 						{projectId}
 						{project}
-						organizationId={currentOrganization?.id ?? null}
 						{members}
 						{canViewAllWork}
 						closed={!!project.closedAt}
@@ -430,6 +440,12 @@
 			{#if activeTab === 'report' && canViewReport}
 				<div class="tab-content">
 					<ReportTab {pluginId} {projectId} {project} />
+				</div>
+			{/if}
+
+			{#if activeTab === 'categories' && canManage}
+				<div class="tab-content">
+					<CategoriesTab {pluginId} {project} closed={!!project.closedAt} />
 				</div>
 			{/if}
 

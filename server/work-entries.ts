@@ -19,13 +19,7 @@ import type { RemoteContext } from './context.js';
 import { isDevMode, isCoreAdmin, resolveUserId } from './context.js';
 import { hasCapability, requireCapability } from './permissions.js';
 import { ensureProjectOpen } from './projects.js';
-
-export interface WorkEntryCategory {
-	id: number;
-	name: string;
-	sortOrder: number;
-	isActive: boolean;
-}
+import { resolveEntryCategory } from './work-categories.js';
 
 export interface WorkEntry {
 	id: number;
@@ -293,7 +287,6 @@ export async function createWorkEntry(
 ): Promise<WorkEntry> {
 	if (!params?.projectId) throw new Error('Érvénytelen projekt azonosító');
 	if (!params.title || !params.title.trim()) throw new Error('A bejegyzés címe kötelező');
-	if (!params.categoryId) throw new Error('A kategória megadása kötelező');
 	validateHours(params.hours);
 	validateWorkDate(params.workDate);
 
@@ -357,17 +350,8 @@ export async function createWorkEntry(
 		throw new Error('A dolgozó nem tagja ennek a projektnek');
 	}
 
-	// Kategória validáció (ha meg van adva)
-	let categoryId: number | null = params.categoryId ?? null;
-	if (categoryId !== null) {
-		const catCheck = await context.db.query(
-			`SELECT id FROM app__racona_work.work_entry_categories WHERE id = $1 AND is_active = TRUE`,
-			[categoryId]
-		);
-		if (catCheck.rows.length === 0) {
-			throw new Error('A megadott kategória nem létezik vagy inaktív');
-		}
-	}
+	// A kategória a projekt saját listájából való; ha a projektnek van aktív kategóriája, kötelező
+	const categoryId = await resolveEntryCategory(context, params.projectId, params.categoryId);
 
 	const insert = await context.db.query(
 		`INSERT INTO app__racona_work.work_entries
@@ -417,7 +401,7 @@ export async function updateWorkEntry(
 	if (!params?.id) throw new Error('Érvénytelen bejegyzés azonosító');
 
 	const existing = await context.db.query(
-		`SELECT we.id, we.project_id, we.employee_id, p.organization_id, p.closed_at, e.user_id,
+		`SELECT we.id, we.project_id, we.employee_id, we.category_id, p.organization_id, p.closed_at, e.user_id,
 		        to_char(we.work_date, 'YYYY-MM-DD') AS work_date,
 		        to_char(p.start_date, 'YYYY-MM-DD') AS start_date
 		   FROM app__racona_work.work_entries we
@@ -431,6 +415,7 @@ export async function updateWorkEntry(
 		id: number;
 		project_id: number;
 		employee_id: number;
+		category_id: number | null;
 		organization_id: number;
 		closed_at: string | null;
 		user_id: number;
@@ -467,16 +452,12 @@ export async function updateWorkEntry(
 	// A módosítás utáni nap számít: régi, kezdő dátum előtti bejegyzés csak jó napra tehető át.
 	ensureNotBeforeProjectStart(params.workDate ?? row.work_date, row.start_date);
 
-	// Kategória validáció (ha meg van adva és nem null)
-	if (params.categoryId !== undefined && params.categoryId !== null) {
-		const catCheck = await context.db.query(
-			`SELECT id FROM app__racona_work.work_entry_categories WHERE id = $1 AND is_active = TRUE`,
-			[params.categoryId]
-		);
-		if (catCheck.rows.length === 0) {
-			throw new Error('A megadott kategória nem létezik vagy inaktív');
-		}
-	}
+	// Kategória validáció (ha meg van adva): a projekt saját listájából; a bejegyzés
+	// eddigi, azóta inaktivált kategóriája megtartható
+	const categoryId =
+		params.categoryId !== undefined
+			? await resolveEntryCategory(context, row.project_id, params.categoryId, row.category_id ?? null)
+			: undefined;
 
 	const update = await context.db.query(
 		`UPDATE app__racona_work.work_entries SET
@@ -500,8 +481,8 @@ export async function updateWorkEntry(
 					: String(params.description).trim() || null,
 			params.hours ?? null,
 			params.workDate ?? null,
-			params.categoryId !== undefined,
-			params.categoryId !== undefined ? (params.categoryId ?? null) : null
+			categoryId !== undefined,
+			categoryId ?? null
 		]
 	);
 	const r = update.rows[0] as any;
@@ -571,36 +552,4 @@ export async function deleteWorkEntry(
 
 	await context.db.query(`DELETE FROM app__racona_work.work_entries WHERE id = $1`, [params.id]);
 	return { ok: true };
-}
-
-// --- Kategóriák lekérdezése -------------------------------------------------
-
-/**
- * Az aktív munkabejegyzés-kategóriák listája.
- * Minden bejelentkezett felhasználó lekérdezheti (work.log capability elegendő).
- */
-export async function getWorkEntryCategories(
-	params: { organizationId: number },
-	context: RemoteContext
-): Promise<WorkEntryCategory[]> {
-	if (!params?.organizationId || params.organizationId <= 0) {
-		throw new Error('Érvénytelen szervezet azonosító');
-	}
-
-	// Alap jog: legalább work.log szükséges (minden aktív dolgozó rendelkezik vele)
-	await requireCapability(context, params.organizationId, 'work.log');
-
-	const result = await context.db.query(
-		`SELECT id, name, sort_order, is_active, created_at, updated_at
-		   FROM app__racona_work.work_entry_categories
-		  WHERE is_active = TRUE
-		  ORDER BY sort_order ASC, id ASC`
-	);
-
-	return result.rows.map((r: any) => ({
-		id: r.id,
-		name: r.name,
-		sortOrder: r.sort_order,
-		isActive: r.is_active
-	}));
 }

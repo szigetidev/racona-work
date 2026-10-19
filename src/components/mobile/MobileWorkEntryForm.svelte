@@ -4,7 +4,7 @@
 	Szerkesztésnél törölni is lehet.
 -->
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import type { MobileContext } from './types.js';
 	import type { ProjectListResult, ProjectRow, WorkEntryCategory, WorkEntryRow } from '../../../server/functions.js';
 
@@ -52,21 +52,15 @@
 
 	onMount(async () => {
 		try {
-			const [projectResult, categoryResult] = await Promise.all([
-				ctx.sdk.remote.call('listProjects', {
-					organizationId: ctx.organization.id,
-					status: 'all',
-					pageSize: 200,
-					sortBy: 'name',
-					sortOrder: 'asc'
-				}) as Promise<ProjectListResult>,
-				ctx.sdk.remote.call('getWorkEntryCategories', {
-					organizationId: ctx.organization.id
-				}) as Promise<WorkEntryCategory[]>
-			]);
+			const projectResult = (await ctx.sdk.remote.call('listProjects', {
+				organizationId: ctx.organization.id,
+				status: 'all',
+				pageSize: 200,
+				sortBy: 'name',
+				sortOrder: 'asc'
+			})) as ProjectListResult;
 			// Lezárt projekthez nem lehet rögzíteni; a szerkesztett bejegyzés projektje maradjon a listában
 			projects = (projectResult?.data ?? []).filter((p) => !p.closedAt || p.id === entry?.projectId);
-			categories = categoryResult ?? [];
 
 			if (projectId === null) {
 				const last = lastProjectId();
@@ -80,9 +74,51 @@
 		}
 	});
 
+	// Minden projektnek saját kategórialistája van: projektváltáskor újratöltjük
+	$effect(() => {
+		const id = projectId;
+		untrack(() => loadCategories(id));
+	});
+
+	async function loadCategories(id: number | null) {
+		if (id === null) {
+			categories = [];
+			categoryId = null;
+			return;
+		}
+		try {
+			const result = (await ctx.sdk.remote.call('getWorkEntryCategories', { projectId: id })) as WorkEntryCategory[];
+			if (id !== projectId) return; // közben másik projektet választottak
+			categories = result ?? [];
+		} catch {
+			categories = [];
+		}
+		if (categoryId !== null && !categories.some((c) => c.id === categoryId) && categoryId !== entry?.categoryId) {
+			categoryId = null;
+		}
+		// Új bejegyzésnél az alapértelmezett kategória, vagy ha csak egy van, az az egy
+		if (!entry && categoryId === null) {
+			categoryId =
+				categories.find((c) => c.isDefault)?.id ?? (categories.length === 1 ? categories[0].id : null);
+		}
+	}
+
+	/** Ha a projektnek nincs kategóriája, nem kötelező választani. */
+	const categoryRequired = $derived(categories.length > 0);
+	/** Szerkesztéskor a bejegyzés azóta inaktivált kategóriája is választható marad. */
+	const inactiveCategory = $derived(
+		entry?.categoryId && !categories.some((c) => c.id === entry.categoryId)
+			? { id: entry.categoryId, name: entry.categoryName ?? '' }
+			: null
+	);
+
 	const hoursValid = $derived(hours !== null && hours >= 0.25 && hours <= 24);
 	const valid = $derived(
-		projectId !== null && categoryId !== null && title.trim().length > 0 && hoursValid && !!workDate
+		projectId !== null &&
+			(!categoryRequired || categoryId !== null) &&
+			title.trim().length > 0 &&
+			hoursValid &&
+			!!workDate
 	);
 
 	async function save() {
@@ -165,18 +201,25 @@
 			{/if}
 		</label>
 
-		<label class="m-field">
-			<span class="m-label">{t('work.form.category')}</span>
-			<select class="m-input" bind:value={categoryId} disabled={saving}>
-				<option value={null}>{t('mobile.work.selectCategory')}</option>
-				{#each categories as category (category.id)}
-					<option value={category.id}>{category.name}</option>
-				{/each}
-			</select>
-			{#if submitted && categoryId === null}
-				<span class="field-error">{t('form.required')}</span>
-			{/if}
-		</label>
+		{#if categoryRequired || inactiveCategory}
+			<label class="m-field">
+				<span class="m-label">{t('work.form.category')}</span>
+				<select class="m-input" bind:value={categoryId} disabled={saving}>
+					<option value={null}>{t('mobile.work.selectCategory')}</option>
+					{#each categories as category (category.id)}
+						<option value={category.id}>{category.name}</option>
+					{/each}
+					{#if inactiveCategory}
+						<option value={inactiveCategory.id}>
+							{inactiveCategory.name} ({t('work.form.category.inactive')})
+						</option>
+					{/if}
+				</select>
+				{#if submitted && categoryRequired && categoryId === null}
+					<span class="field-error">{t('form.required')}</span>
+				{/if}
+			</label>
+		{/if}
 
 		<label class="m-field">
 			<span class="m-label">{t('work.form.title')}</span>

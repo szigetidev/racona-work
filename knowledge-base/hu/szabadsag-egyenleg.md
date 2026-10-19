@@ -18,7 +18,7 @@ A Szabadság egyenleg oldal megmutatja, hogyan használja a szervezet a szabads�
 ## Év és szűrő a Szabadság egyenleg oldalon
 Az oldal tetején, jobbra:
 - **Év:** azok az évek, amelyekre van szabadságkeret, és az idei év. Alapból az idei év látszik.
-- **Munkatársak** szűrő: „Mindenki” (alapértelmezett), „Projekt nélkül” (akinek nincs futó projektje), vagy egy projekt a „Projektek” csoportból. A „Lezárt projektek is” kapcsolóval a lezárt projektek is választhatók.
+- **Projekt** szűrő: „Mindenki” (alapértelmezett), „Projekt nélkül” (akinek nincs futó projektje), vagy egy projekt a „Projektek” csoportból. A „Lezárt projektek is” kapcsolóval a lezárt projektek is választhatók.
 
 A projektszűrő a projekt mostani tagjait mutatja, az egész évre. A választott szűrőt a böngésző szervezetenként megjegyzi.
 

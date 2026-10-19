@@ -37,6 +37,7 @@ A projekt adatlapja nyílik meg. A létrehozó „Tulajdonos” szereppel a proj
 - **Tagok**: a projekt tagjai és szerepük.
 - **Munkanapló**: a rögzített munkabejegyzések (akinek van joga munkát rögzíteni).
 - **Riport**: összesítések (a riporthoz jogosultaknak).
+- **Kategóriák**: a projekt saját munkakategóriái (kezelési joggal vagy projektvezetőként).
 - **Beállítások**: lezárás, visszanyitás, törlés (kezelési vagy lezárási joggal).
 
 ## Projekttagok kezelése
@@ -46,6 +47,8 @@ A projekt adatlapja nyílik meg. A létrehozó „Tulajdonos” szereppel a proj
 
 A tag szerepe a listában közvetlenül módosítható, és a tag eltávolítható. Külsős dolgozó is felvehető tagnak. Munkát csak a projekt tagja rögzíthet.
 
+Ha a projektnek több aktív kategóriája van, a tagok mellett **Alapértelmezett kategória** is választható. A munka rögzítésekor ez van előre kiválasztva az adott dolgozónak (a munkanaplóban, telefonon és a Heti rögzítésben is). Ha a projektnek csak egy kategóriája van, az magától ki van választva.
+
 ## Projektvezető kijelölése
 A projektvezető a saját projektjét akkor is kezelheti (adatok, tagok, munkanapló, riport) és lezárhatja, ha a szervezetben nincs ilyen szerepe. Más projektekhez ettől nem kap jogot.
 
@@ -53,12 +56,22 @@ Kijelölés: Tagok fül → a tag szerepét állítsd **Projektvezető**-re (vag
 
 ## Munka rögzítése a munkanaplóban
 1. Projekt adatlap → **Munkanapló** fül → **+ Új bejegyzés**.
-2. Töltsd ki: Feladat címe (kötelező), Kategória (kötelező, pl. Szoftverfejlesztő, Tesztelő), Leírás, Dátum, Óra.
+2. Töltsd ki: Feladat címe (kötelező), Kategória (a projekt saját listájából; kötelező, ha a projektnek van aktív kategóriája), Leírás, Dátum, Óra.
 3. Mentés.
 
 Az óraszám 0,25 és 24 között lehet. A dátum nem lehet korábbi a projekt kezdő dátumánál. Aki mások munkáját is kezeli (pl. Projektkezelő, projektvezető), a **Kinek a nevében** mezőben más tag nevére is rögzíthet.
 
 A listában a Saját és az Összes nézet között válthatsz (ha mások bejegyzéseit is láthatod), szűrhetsz dátumra (-tól, -ig) és dolgozóra. Felül az „Összesen: … óra” összeg látszik. A saját bejegyzésedet szerkesztheted és törölheted; másokét a projektvezető és a Projektkezelő.
+
+## Heti rögzítés
+
+A **Projektek → Heti rögzítés** menüpontban projektbe lépés nélkül rögzítheted a napi munkáidat.
+
+1. A hét napjai kártyákon látszanak a már rögzített munkákkal és a napi összeggel; a hetek között a nyilakkal, vissza az **Ez a hét** gombbal lépsz.
+2. A nap **+ Munka** gombjával válaszd ki a projektet (csak a nyitott projektek, amelyeknek tagja vagy), a kategóriát (ha a projektnek van; az alapértelmezett előre ki van választva), és add meg az órát.
+3. A **Feladat** nem kötelező: üresen a kategória (kategória nélküli projektnél a projekt) neve lesz.
+
+Egy bejegyzésre kattintva szerkesztheted, a ✕ gombbal törölheted. Akinek „Összes munkanapló megtekintése” joga van (pl. Szervezet adminisztrátor), a **Dolgozó** választóval más dolgozó hetét is megnyithatja, és a nevében rögzíthet.
 
 ## Munka rögzítése telefonon
 Telefonon a Work **Munka rögzítése** gyorsművelete egy nap összes saját bejegyzését mutatja minden projektből. Az Előző nap és Következő nap gombokkal lapozhatsz, a **Munka rögzítése** gombbal új bejegyzést veszel fel, egy bejegyzésre koppintva szerkesztheted vagy törölheted. A Projekt listában csak a nyitott (nem lezárt) projektek szerepelnek, a legutóbb használt előre ki van választva. Külsős dolgozó is használhatja. Részletek: az Értesítések és mobil használat leírásban.
@@ -85,6 +98,17 @@ Lezárt projektnél a munkanapló zárolt: új bejegyzés nem rögzíthető, a m
 2. A fejlécben és a listán „Lezárva” jelvény jelenik meg (a jelvény fölé állva látszik, ki és mikor zárta le).
 
 Visszanyitás: ugyanitt **Projekt visszanyitása**; ezután a feladatok újra rögzíthetők és módosíthatók. A lezárt projekt nem törölhető, előbb vissza kell nyitni. A státusz (Aktív, Befejezett stb.) a lezárástól független.
+
+## Munkakategóriák projektenként
+
+Minden projektnek saját kategórialistája van. A **Kategóriák** fület az látja, akinek „Projektek kezelése” joga van, valamint a projekt projektvezetője.
+
+- **Új kategória:** név megadásával; egy projekten belül két azonos nevű nem lehet.
+- **Átvétel…:** kategóriák másolása a szervezet egy másik projektjéből vagy a **Régi közös listából** (a korábban minden projektre érvényes lista). Csak az aktívak jönnek át, a már meglévő nevek kimaradnak.
+- **Átnevezés**, sorrend (nyilak), **Inaktiválás / Aktiválás:** az inaktív kategória új bejegyzéshez nem választható, a régi bejegyzéseken megmarad.
+- **Törlés (✕):** csak olyan kategóriánál, amelyet egy bejegyzés sem használ.
+
+Amíg a projektnek nincs aktív kategóriája, a munkanaplóban nem kötelező kategóriát választani. Lezárt projekt kategóriái nem módosíthatók.
 
 ## Projekt riport
 A **Riport** fül a projekt munkáját összesíti. Látja, akinek „Összes munkanapló megtekintése” vagy „Projektek kezelése” joga van (alapból Szervezet adminisztrátor, Projektkezelő, HR felelős), valamint a projekt projektvezetője.
