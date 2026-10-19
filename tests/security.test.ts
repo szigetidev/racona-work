@@ -13,6 +13,7 @@ import { getLeaveRequests } from '../server/leave.ts';
 import { getLeaveCalendar } from '../server/leave-days.ts';
 import { addProjectMember, removeProjectMember } from '../server/projects.ts';
 import { getEmployeeDetails, getMyEmployee } from '../server/employees.ts';
+import { createOrganization, deleteOrganization, getOrganizations, updateOrganization } from '../server/organizations.ts';
 import type { RemoteContext } from '../server/context.ts';
 
 describe('escapelés', () => {
@@ -264,5 +265,63 @@ describe('a dolgozói adatlap láthatósága', () => {
 	test('employee.view nélkül a saját adatlap sem kérhető le', async () => {
 		const { context } = fakeContext({ caps: ['leave.request'] });
 		await expect(getEmployeeDetails({ employeeId: 70 }, context)).rejects.toThrow('Nincs jogosultságod');
+	});
+});
+
+describe('Szervezetek menü szervezet adminisztrátornak', () => {
+	/** Ál-kontextus: a 7-es felhasználó a 3-as szervezetben `caps` képességekkel, a 4-esben semmivel. */
+	function orgContext(opts: { caps: string[]; coreAdmin?: boolean; external?: boolean }) {
+		const queries: { sql: string; params: unknown[] }[] = [];
+		const org = (id: number) => ({ id, name: `Szervezet ${id}`, slug: `szervezet-${id}`, address: null, address_lat: null });
+		const query = async (sql: string, params: unknown[] = []) => {
+			queries.push({ sql, params });
+			if (sql.includes('SELECT is_external FROM')) return { rows: [{ is_external: opts.external === true }] };
+			if (sql.includes('rc.capability = $3')) {
+				return { rows: Number(params[0]) === 3 && opts.caps.includes(String(params[2])) ? [{ ok: 1 }] : [] };
+			}
+			if (sql.includes("rc.capability = 'org.manage'")) {
+				return { rows: opts.caps.includes('org.manage') ? [org(3)] : [] };
+			}
+			if (sql.includes('FROM app__racona_work.organizations') && !sql.includes('WHERE')) return { rows: [org(3), org(4)] };
+			if (sql.includes('SELECT address, address_lat FROM')) return { rows: [{ address: null, address_lat: null }] };
+			if (sql.includes('SELECT id FROM app__racona_work.organizations WHERE slug')) return { rows: [] };
+			if (/^\s*UPDATE app__racona_work.organizations/.test(sql)) return { rows: [org(Number(params[8]))] };
+			return { rows: [] };
+		};
+		const context = {
+			pluginId: 'racona-work',
+			userId: 7,
+			permissions: opts.coreAdmin ? ['admin'] : [],
+			db: { query, connect: async () => ({ query, release: () => {} }) }
+		} as unknown as RemoteContext;
+		return { context, queries };
+	}
+
+	test('a szervezet adminisztrátor a saját szervezetét látja', async () => {
+		const { context } = orgContext({ caps: ['org.manage'] });
+		const orgs = await getOrganizations({}, context);
+		expect(orgs.map((o) => o.id)).toEqual([3]);
+	});
+
+	test('org.manage nélkül üres a lista, külsősnek is', async () => {
+		expect(await getOrganizations({}, orgContext({ caps: ['members.view'] }).context)).toEqual([]);
+		expect(await getOrganizations({}, orgContext({ caps: ['org.manage'], external: true }).context)).toEqual([]);
+	});
+
+	test('a rendszergazda minden szervezetet lát', async () => {
+		const orgs = await getOrganizations({}, orgContext({ caps: [], coreAdmin: true }).context);
+		expect(orgs.map((o) => o.id)).toEqual([3, 4]);
+	});
+
+	test('a szervezet adminisztrátor csak a saját szervezetét szerkesztheti', async () => {
+		const { context } = orgContext({ caps: ['org.manage'] });
+		await expect(updateOrganization({ id: 3, name: 'Új név' }, context)).resolves.toMatchObject({ id: 3 });
+		await expect(updateOrganization({ id: 4, name: 'Új név' }, context)).rejects.toThrow('Nincs jogosultságod');
+	});
+
+	test('létrehozni és törölni továbbra is csak a rendszergazda tud', async () => {
+		const { context } = orgContext({ caps: ['org.manage'] });
+		await expect(createOrganization({ name: 'Másik' }, context)).rejects.toThrow('adminisztrátori');
+		await expect(deleteOrganization({ id: 3 }, context)).rejects.toThrow('adminisztrátori');
 	});
 });

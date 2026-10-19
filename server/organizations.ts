@@ -8,7 +8,7 @@
 
 import type { RemoteContext } from './context.js';
 import { isDevMode, isCoreAdmin, resolveUserId } from './context.js';
-import { requireCapability, seedDefaultRoles } from './permissions.js';
+import { isExternalMember, requireCapability, seedDefaultRoles } from './permissions.js';
 import { seedDocumentTypes } from './document-types.js';
 import { collectOrganizationDocumentFileIds, deleteStoredFiles } from './employee-documents.js';
 import type { PaginatedResult } from './types.js';
@@ -252,26 +252,48 @@ export async function getUserOrganizations(
 }
 
 /**
- * Összes szervezet lekérdezése (admin funkció).
+ * A Szervezetek menü listája.
+ * Rendszergazda az összes szervezetet látja, a szervezet adminisztrátor
+ * (`org.manage` képesség) csak azokat, amelyekben ez a képessége megvan.
  * Követelmény: 2.4
  */
 export async function getOrganizations(
 	params: {},
 	context: RemoteContext
 ): Promise<Organization[]> {
-	requireAdmin(context);
+	if (isDevMode(context) || isCoreAdmin(context)) {
+		const result = await context.db.query(
+			`SELECT ${ORG_COLUMNS}
+			 FROM app__racona_work.organizations
+			 ORDER BY created_at DESC`
+		);
+		return result.rows.map(mapOrganization);
+	}
 
+	const userId = await resolveUserId(context);
 	const result = await context.db.query(
 		`SELECT ${ORG_COLUMNS}
 		 FROM app__racona_work.organizations
-		 ORDER BY created_at DESC`
+		 WHERE id IN (
+		   SELECT mr.organization_id
+		     FROM app__racona_work.wp_member_roles mr
+		     JOIN app__racona_work.wp_role_capabilities rc ON rc.role_id = mr.role_id
+		    WHERE mr.user_id = $1 AND rc.capability = 'org.manage'
+		 )
+		 ORDER BY created_at DESC`,
+		[userId]
 	);
 
-	return result.rows.map(mapOrganization);
+	// Külsős dolgozónál a szervezeti képességek nem érvényesek (lásd hasCapability)
+	const organizations: Organization[] = [];
+	for (const row of result.rows) {
+		if (!(await isExternalMember(context, row.id, userId))) organizations.push(mapOrganization(row));
+	}
+	return organizations;
 }
 
 /**
- * Szervezet adatainak frissítése.
+ * Szervezet adatainak frissítése (rendszergazda vagy a szervezet `org.manage` képességű tagja).
  * Követelmények: 2.5
  */
 export async function updateOrganization(
@@ -287,7 +309,7 @@ export async function updateOrganization(
 	},
 	context: RemoteContext
 ): Promise<SavedOrganization> {
-	requireAdmin(context);
+	await requireCapability(context, params.id, 'org.manage');
 
 	const slug = generateSlug(params.name);
 	const taxNumber = normalizeTaxNumber(params.taxNumber);

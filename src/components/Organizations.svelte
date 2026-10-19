@@ -12,7 +12,7 @@
 
 <script lang="ts">
   /**
-   * Organizations - Szervezetek kezelése (admin)
+   * Organizations - Szervezetek kezelése (rendszergazda, illetve org.manage képességű szervezet adminisztrátor)
    */
 
   import { onMount } from "svelte";
@@ -277,7 +277,7 @@
       // Szervezetek betöltése
       orgStore.loadOrganizations();
 
-      // Admin komponens, ezért az összes szervezetet betöltjük
+      // Rendszergazdának az összes, szervezet adminisztrátornak a saját szervezetei
       loadOrganizations();
     }
   });
@@ -290,9 +290,12 @@
         <h2>{t("organizations.title")}</h2>
         <p class="subtitle">{t("organizations.subtitle")}</p>
       </div>
-      <button class="btn-primary" onclick={() => (showCreateForm = true)}>
-        + {t("organizations.create")}
-      </button>
+      <!-- Új szervezetet csak rendszergazda hozhat létre -->
+      {#if orgStore?.isAdmin}
+        <button class="btn-primary" onclick={() => (showCreateForm = true)}>
+          + {t("organizations.create")}
+        </button>
+      {/if}
     </div>
 
     {#if error}
@@ -594,21 +597,24 @@
             </label>
           </div>
           <div class="modal-footer">
-            <button
-              class="btn-danger"
-              onclick={() => {
-                const orgToDelete = organizations.find(
-                  (o) => o.id === editOrgId,
-                );
-                if (orgToDelete) {
-                  showEditForm = false;
-                  handleDeleteOrganization(orgToDelete);
-                }
-              }}
-              disabled={loading}
-            >
-              {t("button.delete")}
-            </button>
+            <!-- Szervezetet csak rendszergazda törölhet -->
+            {#if orgStore?.isAdmin}
+              <button
+                class="btn-danger"
+                onclick={() => {
+                  const orgToDelete = organizations.find(
+                    (o) => o.id === editOrgId,
+                  );
+                  if (orgToDelete) {
+                    showEditForm = false;
+                    handleDeleteOrganization(orgToDelete);
+                  }
+                }}
+                disabled={loading}
+              >
+                {t("button.delete")}
+              </button>
+            {/if}
             <div style="flex: 1;"></div>
             <button
               class="btn-secondary"
