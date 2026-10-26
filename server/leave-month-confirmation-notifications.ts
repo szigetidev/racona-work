@@ -27,7 +27,7 @@ import {
 	toRecipient
 } from './notification-email.js';
 import type { Recipient } from './notification-email.js';
-import { notifiersSettingsKey } from './leave-notifications.js';
+import { NOTIFIER_CAPABILITY_SQL, notifiersSettingsKey } from './leave-notifications.js';
 import { isLeaveType, LEAVE_TYPE_LABELS } from './leave-types.js';
 import { formatMonthLabel, summarizeSnapshot } from './leave-month-confirmation-utils.js';
 import type { DisputeItem, MonthSnapshot, SnapshotPeriod, SnapshotSummary } from './leave-month-confirmation-utils.js';
@@ -280,7 +280,8 @@ export async function notifyMonthConfirmationDisputed(
 			   FROM auth.users u
 			  WHERE u.id = $1
 			     OR u.id IN (SELECT e.user_id FROM ${SCHEMA}.employees e
-			                  WHERE e.id = ANY($2::int[]) AND e.organization_id = $3 AND e.status = 'active' AND e.is_external = FALSE)`,
+			                  WHERE e.id = ANY($2::int[]) AND e.organization_id = $3 AND e.status = 'active' AND e.is_external = FALSE
+			                    AND ${NOTIFIER_CAPABILITY_SQL})`,
 			[notice.sentBy ?? 0, notifierEmployeeIds, notice.organizationId]
 		);
 		const actor = await actorUserId(context);
@@ -493,7 +494,8 @@ export async function notifyMonthConfirmationClosingSummary(
 			`SELECT DISTINCT u.id AS user_id, u.full_name, u.email, ${RECIPIENT_LOCALE_SQL}
 			   FROM ${SCHEMA}.employees e
 			   JOIN auth.users u ON u.id = e.user_id
-			  WHERE e.id = ANY($1::int[]) AND e.organization_id = $2 AND e.status = 'active' AND e.is_external = FALSE`,
+			  WHERE e.id = ANY($1::int[]) AND e.organization_id = $2 AND e.status = 'active' AND e.is_external = FALSE
+			    AND ${NOTIFIER_CAPABILITY_SQL}`,
 			[notifierEmployeeIds, notice.organizationId]
 		);
 		const recipients: Recipient[] = recipientResult.rows.map(toRecipient);

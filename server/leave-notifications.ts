@@ -40,6 +40,16 @@ export function notifiersSettingsKey(organizationId: number): string {
 	return `settings:leave_request_notifiers:org_${organizationId}`;
 }
 
+/**
+ * Az értesítendő listáról csak az kap értesítést, akinek még van leave.balance.manage
+ * joga: a szerep elvétele után a lista nem frissül magától, a régi kezelő ne kapjon
+ * tovább leveleket. Az `e` aliasú employees sorra szűr.
+ */
+export const NOTIFIER_CAPABILITY_SQL = `EXISTS (SELECT 1 FROM ${SCHEMA}.wp_member_roles mr
+	JOIN ${SCHEMA}.wp_role_capabilities rc ON rc.role_id = mr.role_id
+	WHERE mr.organization_id = e.organization_id AND mr.user_id = e.user_id
+	  AND rc.capability = 'leave.balance.manage')`;
+
 // ---------------------------------------------------------------------------
 // Beállítás: kik kapnak értesítést az új kérelmekről (Beállítások → Szabadság)
 // ---------------------------------------------------------------------------
@@ -186,7 +196,8 @@ export async function notifyLeaveRequestsCreated(
 			  WHERE e.id = ANY($1::int[])
 			    AND e.organization_id = $2
 			    AND e.status = 'active'
-			    AND e.is_external = FALSE`,
+			    AND e.is_external = FALSE
+			    AND ${NOTIFIER_CAPABILITY_SQL}`,
 			[notifierEmployeeIds, request.organizationId]
 		);
 		const recipients = recipientResult.rows
@@ -415,7 +426,8 @@ export async function notifyLeaveRequestWithdrawn(
 			  WHERE e.id = ANY($1::int[])
 			    AND e.organization_id = $2
 			    AND e.status = 'active'
-			    AND e.is_external = FALSE`,
+			    AND e.is_external = FALSE
+			    AND ${NOTIFIER_CAPABILITY_SQL}`,
 			[notifierEmployeeIds, request.organizationId]
 		);
 		const recipients = recipientResult.rows
